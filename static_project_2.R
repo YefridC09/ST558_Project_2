@@ -12,6 +12,7 @@ library(lubridate)
 library(janitor)
 library(zipcodeR)
 library(maps)
+library(ggridges)
 
 store_data <- read_excel("data/superstore_data.xls") |>
   clean_names() |>
@@ -133,6 +134,20 @@ box_plot <-ggplot(data = store_data,
 
 box_plot
 
+#now we create a violin plot for the discount variable, trying to investigate the distribution of the values across all the sales, by category faceted by region
+
+box_plot2 <-ggplot(data = store_data,
+                  aes(x = discount, 
+                      y = category)) + 
+  geom_violin() +
+  labs(title = "Box plot of discount by category, faceted by segment",
+       x = "Discount",
+       y = "Category") +
+  facet_wrap(~region) +
+  theme_bw()
+
+box_plot2
+
 #Now we create a scattered plot of sales vs profit colored by region and faceted by segment to investigate the relationship between sales and profit for each region, and segment.
 
 sc_plot <- ggplot(data = store_data,
@@ -140,9 +155,10 @@ sc_plot <- ggplot(data = store_data,
                       y = profit,
                       colour = region)) + 
   geom_point() +
-  labs(title = "Profit vs sales",
+  labs(title = "Profit vs sales, by  segment and region",
        x = "Sales",
-       y = "Category") +
+       y = "Category",
+       colour = "Region") +
   #scale_x_log10() +
   # scale_colour_viridis_b()+
   facet_wrap(~segment) +
@@ -150,6 +166,21 @@ sc_plot <- ggplot(data = store_data,
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
 
 sc_plot
+
+#We create a 100% stacked bar chart to show the proportion of bub categories that the most discounts.
+
+sbar_plot2 <- ggplot(data = store_data,
+                  aes(x = sub_category, 
+                      fill = as.factor(discount))) + 
+  geom_bar(position = "fill")+
+  labs(title = "Profit vs sales, by  segment and region",
+       x = "Sub category",
+       y = "Proportion",
+       fill = "Discount") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+
+sbar_plot2
 
 #We are going to generate a map that shows the sales by zip code
 
