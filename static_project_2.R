@@ -12,7 +12,6 @@ library(lubridate)
 library(janitor)
 library(zipcodeR)
 library(maps)
-library(ggridges)
 
 store_data <- read_excel("data/superstore_data.xls") |>
   clean_names() |>
