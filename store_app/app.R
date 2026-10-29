@@ -61,7 +61,11 @@ ui <- page_sidebar(
         inputId = "cat_2",
         label = "Select a second categorical variable to subset the data",
         choices = c("None" = "none")
-      )
+      ),
+      
+      #Creating a conditional panel for the second categoricla variable subseting
+      conditionalPanel(condition = "input.cat_2 != 'none'",
+                       uiOutput("cat_values_ui_2"))
   ),
   #Selecting a numeric variable and setting upper and lower bound
   
@@ -179,6 +183,71 @@ server <- function(input, output, session) {
       choices = choices_cat2,
       selected = "none"
     )
+  })
+  
+  output$cat_values_ui_2 <- renderUI({
+    
+    #Checking that one value is selected
+    req(input$cat_2 != "none")
+    
+    #getting a list of values for the selected categorical variable
+    values <- sort(
+      unique(as.character(
+        store_data[[input$cat_2]]
+      )))
+    
+    #As we will create multiple elements we will use taglist function to have them all
+    tagList(
+      
+      #Creating the list which by default selects all the variables
+      selectizeInput(
+        inputId = "cat_values_2",
+        label = paste("Select", input$cat_1, "values"),
+        choices = values,
+        selected = values,
+        multiple = TRUE
+      ),
+      
+      #Creating the two buttons
+      fluidRow(
+        column(6,
+               actionButton("select_all_cat_2", "Select All")),
+        
+        column(6,
+               actionButton("clear_all_cat_2", "Clear All"))
+      )
+    )
+    
+    
+  })
+  
+  #Creating what the select button does
+  
+  observeEvent(input$select_all_cat_2, {
+    values <- sort(
+      unique(as.character(
+        store_data[[input$cat_2]]
+      )))
+    
+    #updating the selection
+    
+    updateSelectizeInput(
+      session,
+      "cat_values_2",
+      selected = values
+    )
+    
+  })
+  
+  #Creating what the clear all button does
+  
+  observeEvent(input$clear_all_cat_2, {
+    updateSelectizeInput(
+      session,
+      "cat_values_2",
+      selected = character(0)
+    )
+    
   })
   
   #Will run this every time one of the variables inside change
