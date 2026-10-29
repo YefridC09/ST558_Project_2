@@ -7,9 +7,10 @@ library(lubridate)
 library(janitor)
 library(zipcodeR)
 library(maps)
+library(DT)
 
 #First we are going to import the data, which is going to be run one time when the app is launched
-store_data <- read_excel("../data/superstore_data.xls") |>
+store_data <- read_excel("assets/superstore_data.xls") |>
   clean_names() |>
   mutate(region = as.factor(region),
          category = as.factor(category),
@@ -93,8 +94,37 @@ ui <- page_sidebar(
     conditionalPanel(condition = "input.num_2 != 'none'",
                      uiOutput("num_2_filter_ui"))
                    
-  )
+  ),
   
+  #Creating the button to get the data.
+  actionButton("get_data", "Get data")
+  ),
+  
+  mainPanel(
+    tabsetPanel(
+      tabPanel(
+        "About",
+        "This app is used to explore the data from online sales of the SuperStore, ...",
+        tags$figure(
+          class = "centerFigure",
+          tags$img(
+            src = "assets/superstore.png",
+            width = 600,
+            alt = "Picture of an astragalus (bone die)"
+          ),
+          tags$figcaption("Image of Astragalus by Yaan, 2007")
+        )
+      ),
+      tabPanel(
+        "Data Download",
+        DT::dataTableOutput("table_filtered"),
+        downloadButton("download_data", "Download")
+      ),
+      tabPanel(
+        "Data Exploration",
+        
+      )
+    )
   )
   
  )
@@ -305,6 +335,63 @@ server <- function(input, output, session) {
                 ceiling(max(num_var, na.rm = TRUE)))
     )
   })
+  
+  #Creating the reactive context for the button so it actually gets the data
+  filtered_data <- eventReactive(input$get_data,{
+    
+    data <- store_data
+    
+    #Applying the filter to the first numeric variable
+    if(!is.null(input$num_1) && input$num_1 != "none"){
+      
+      rng <- input$num_1_filter
+      
+      data <- data |>
+        filter(.data[[input$num_1]] >= rng[1],
+               .data[[input$num_1]] <= rng[2])
+    }
+    
+    #Applying numeric filter 2
+    if(!is.null(input$num_2) && input$num_2 != "none"){
+      
+      rng <- input$num_2_filter
+      
+      data <- data |>
+        filter(.data[[input$num_2]] >= rng[1],
+               .data[[input$num_2]] <= rng[2])
+    }
+    
+    #Applying filter from first categorical variable
+    if(!is.null(input$cat_1) && input$cat_1 != "none"){
+      
+      
+      data <- data |>
+        filter(.data[[input$cat_1]] %in% input$cat_values)
+    }
+    
+    #Applying filter number 2 for categorical variable
+    if(!is.null(input$cat_2) && input$cat_2 != "none"){
+      
+      
+      data <- data |>
+        filter(.data[[input$cat_2]] %in% input$cat_values_2)
+    }
+    
+#    print("event running")
+    data
+    
+  })
+  
+  output$table_filtered <- DT::renderDataTable(filtered_data())
+  
+  output$download_data <- downloadHandler(
+    filename = function() {
+      paste("filtered_data", Sys.Date(), ".csv", sep = "")
+    },
+    content = function(file) {
+      write.csv(filtered_data(), file)
+    }
+  )
   
 }
 

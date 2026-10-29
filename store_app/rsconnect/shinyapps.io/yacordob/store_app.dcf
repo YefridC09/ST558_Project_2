@@ -1,0 +1,12 @@
+name: store_app
+title: store_app
+username: yacordob
+account: yacordob
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 18310589
+bundleId: 12753468
+url: https://yacordob.shinyapps.io/store_app/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
