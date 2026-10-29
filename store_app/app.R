@@ -34,6 +34,16 @@ num_vars <- c("Sales" = "sales",
               "Discount" = "discount",
               "Profit" = "profit")
 
+#cahngong the browser path
+addResourcePath(
+  prefix = "assets",
+  directoryPath = "assets"
+)
+
+#Function that returns the name shown to the user (i.e. "Sub category") from the name of the column (i.e. "sub_category")
+get_label <- function(value, lookup) {
+  names(lookup)[match(value, lookup)]
+}
 
 ui <- page_sidebar(
   
@@ -109,10 +119,13 @@ ui <- page_sidebar(
           class = "centerFigure",
           tags$img(
             src = "assets/superstore.png",
-            width = 600,
-            alt = "Picture of an astragalus (bone die)"
+            width = "100%",
+            style = "max-width: 600px; height: auto;",
+            alt = "SuperStore sales dashboard image"
           ),
-          tags$figcaption("Image of Astragalus by Yaan, 2007")
+          tags$figcaption(
+            "US SuperStore online sales"
+          )
         )
       ),
       tabPanel(
@@ -120,9 +133,260 @@ ui <- page_sidebar(
         DT::dataTableOutput("table_filtered"),
         downloadButton("download_data", "Download")
       ),
+      #Creating the data exploration tab
       tabPanel(
         "Data Exploration",
         
+        #Adding a title and instructions for the data exploration section
+        h2("Explore the filtered SuperStore data"),
+        
+        p(
+          "The summaries and graphs below use the data obtained when the ",
+          strong("Get data"),
+          " button is clicked."
+        ),
+        
+        #Creating subtabs to separate the different types of summaries
+        tabsetPanel(
+          
+
+          tabPanel(
+            "Categorical summaries",
+            
+            br(),
+            
+            #Creating the inputs used to build the categorical summaries
+            fluidRow(
+              
+              #Selecting the first categorical variable
+              column(
+                width = 4,
+                
+                selectInput(
+                  inputId = "summary_cat_1",
+                  label = "Select the first categorical variable",
+                  choices = vars,
+                  selected = "segment"
+                )
+              ),
+              
+              #Selecting an optional second categorical variable
+              column(
+                width = 4,
+                
+                selectInput(
+                  inputId = "summary_cat_2",
+                  label = "Select an optional second categorical variable",
+                  choices = c(
+                    "None" = "none",
+                    vars
+                  ),
+                  selected = "none"
+                )
+              ),
+              
+              #Selecting how the bars will be displayed when two variables are selected
+              column(
+                width = 4,
+                
+                selectInput(
+                  inputId = "bar_position",
+                  label = "Select the bar chart position",
+                  choices = c(
+                    "Stacked" = "stack",
+                    "Side by side" = "dodge",
+                    "Proportions" = "fill"
+                  ),
+                  selected = "stack"
+                )
+              )
+            ),
+            
+            #Creating the location where the categorical table will be displayed
+            h4("Contingency table"),
+            
+            DT::dataTableOutput(
+              outputId = "categorical_summary_table"
+            ),
+            
+            br(),
+            
+            #Creating the location where the categorical graph will be displayed
+            h4("Categorical bar chart"),
+            
+            plotOutput(
+              outputId = "categorical_summary_plot",
+              height = "500px"
+            )
+          ),
+          
+          
+          tabPanel(
+            "Numeric summaries",
+            
+            br(),
+            
+            #Creating the inputs used to generate the numeric summaries
+            fluidRow(
+              
+              #Selecting the numeric variable that will be summarized
+              column(
+                width = 6,
+                
+                selectInput(
+                  inputId = "summary_num",
+                  label = "Select a numeric variable to summarize",
+                  choices = num_vars,
+                  selected = "sales"
+                )
+              ),
+              
+              #Selecting an optional categorical variable to group the observations
+              column(
+                width = 6,
+                
+                selectInput(
+                  inputId = "summary_group",
+                  label = "Optionally summarize across a categorical variable",
+                  choices = c(
+                    "No grouping" = "none",
+                    vars
+                  ),
+                  selected = "none"
+                )
+              )
+            ),
+            
+            #Creating the location where the numeric table will be displayed
+            h4("Numeric summary statistics"),
+            
+            DT::dataTableOutput(
+              outputId = "numeric_summary_table"
+            )
+          ),
+          
+       
+          tabPanel(
+            "Graphs",
+            
+            br(),
+            
+            #Creating the first row of graph options
+            fluidRow(
+              
+              #Selecting the type of graph that will be created
+              column(
+                width = 4,
+                
+                selectInput(
+                  inputId = "explore_plot_type",
+                  label = "Select the type of graph",
+                  choices = c(
+                    "Boxplot" = "boxplot",
+                    "Violin plot" = "violin",
+                    "Histogram" = "histogram",
+                    "Scatterplot" = "scatterplot"
+                  ),
+                  selected = "boxplot"
+                )
+              ),
+              
+              #Selecting the numeric variable that will be plotted
+              column(
+                width = 4,
+                
+                selectInput(
+                  inputId = "explore_num_y",
+                  label = "Select the numeric variable",
+                  choices = num_vars,
+                  selected = "sales"
+                )
+              ),
+              
+              #Displaying a second numeric variable only for scatterplots
+              column(
+                width = 4,
+                
+                conditionalPanel(
+                  condition = "input.explore_plot_type == 'scatterplot'",
+                  
+                  selectInput(
+                    inputId = "explore_num_x",
+                    label = "Select the numeric x variable",
+                    choices = num_vars,
+                    selected = "profit"
+                  )
+                )
+              )
+            ),
+            
+            #Creating the second row of graph options
+            fluidRow(
+              
+              #Selecting the categorical variable for the x axis
+              column(
+                width = 4,
+                
+                selectInput(
+                  inputId = "explore_cat_x",
+                  label = "Select a categorical x variable",
+                  choices = vars,
+                  selected = "category"
+                )
+              ),
+              
+              #Selecting an optional categorical variable for color
+              column(
+                width = 4,
+                
+                selectInput(
+                  inputId = "explore_color",
+                  label = "Optionally color by a categorical variable",
+                  choices = c(
+                    "No color variable" = "none",
+                    vars
+                  ),
+                  selected = "none"
+                )
+              ),
+              
+              #Selecting an optional categorical variable to facet the graph
+              column(
+                width = 4,
+                
+                selectInput(
+                  inputId = "explore_facet",
+                  label = "Optionally facet by a categorical variable",
+                  choices = c(
+                    "No facet variable" = "none",
+                    vars
+                  ),
+                  selected = "none"
+                )
+              )
+            ),
+            
+            #Displaying the number of bins option only for histograms
+            conditionalPanel(
+              condition = "input.explore_plot_type == 'histogram'",
+              
+              sliderInput(
+                inputId = "histogram_bins",
+                label = "Number of histogram bins",
+                min = 5,
+                max = 100,
+                value = 30,
+                step = 5
+              )
+            ),
+            
+            #Creating the location where the selected graph will be displayed
+            plotOutput(
+              outputId = "exploration_plot",
+              height = "600px"
+            )
+          )
+        )
       )
     )
   )
@@ -232,7 +496,7 @@ server <- function(input, output, session) {
       #Creating the list which by default selects all the variables
       selectizeInput(
         inputId = "cat_values_2",
-        label = paste("Select", input$cat_1, "values"),
+        label = paste("Select", input$cat_2, "values"),
         choices = values,
         selected = values,
         multiple = TRUE
@@ -380,19 +644,180 @@ server <- function(input, output, session) {
 #    print("event running")
     data
     
+  },
+
+#Returning the unfiltered data before the button is clicked for the first time
+ignoreNULL = FALSE
+)
+  
+  
+  #Creating either a one-way or two-way contingency table
+  output$categorical_summary_table <- DT::renderDataTable({
+    
+    #Getting the most recent data created by the Get data button
+    data <- filtered_data()
+    
+    #Displaying a message instead of an error when no observations are returned
+    validate(
+      need(
+        nrow(data) > 0,
+        "The selected filters returned no observations."
+      )
+    )
+    
+    #Pausing the execution until the first categorical variable is available
+    req(input$summary_cat_1)
+    
+    #Creating a one-way contingency table when no second variable is selected
+    if (
+      is.null(input$summary_cat_2) ||
+      input$summary_cat_2 == "none"
+    ) {
+      
+      #Creating a one-way contingency table using the selected variable
+      summary_table <- table(
+        data[[input$summary_cat_1]],
+        useNA = "ifany"
+      )
+      
+      #Converting the table into a data frame so DT can display it
+      summary_table <- as.data.frame(
+        summary_table
+      )
+      
+      #Changing the automatically created column names
+      names(summary_table) <- c(
+        input$summary_cat_1,
+        "count"
+      )
+      
+      #Arranging the table from the highest to the lowest count
+      summary_table <- summary_table[
+        order(
+          summary_table$count,
+          decreasing = TRUE
+        ),
+      ]
+      
+    } else {
+      
+      #Creating a two-way contingency table using the selected variables
+      summary_table <- table(
+        data[[input$summary_cat_1]],
+        data[[input$summary_cat_2]],
+        useNA = "ifany"
+      )
+      
+      #Converting the table into a data frame so DT can display it
+      summary_table <- as.data.frame.matrix(
+        summary_table
+      )
+      
+      #Creating a column containing the levels of the first variable
+      summary_table <- cbind(
+        category = row.names(summary_table),
+        summary_table
+      )
+      
+      #Changing the name of the first column to the selected variable
+      names(summary_table)[1] <- input$summary_cat_1
+    }
+    
+    #Removing the row names created by the table conversion
+    row.names(summary_table) <- NULL
+    
+    #Returning the categorical summary table
+    summary_table
+    
+  }
+  )
+  
+  #Displaying the data obtained when the Get data button is clicked
+  output$table_filtered <- DT::renderDataTable({
+    
+    #Getting the most recent data created by the Get data button
+    filtered_data()
+    
   })
   
-  output$table_filtered <- DT::renderDataTable(filtered_data())
-  
+  #Creating the file that will be downloaded when the Download button is clicked
   output$download_data <- downloadHandler(
+    
+    #Name of the file, it includes the date to avoid overwriting older downloads
     filename = function() {
-      paste("filtered_data", Sys.Date(), ".csv", sep = "")
+      paste0("superstore_data_", Sys.Date(), ".csv")
     },
+    
+    #Saving the data as a csv file
     content = function(file) {
-      write.csv(filtered_data(), file)
+      write_csv(filtered_data(), file)
     }
   )
   
+  
+  #Creating a bar chart with one or two categorical variables
+  output$categorical_summary_plot <- renderPlot({
+    
+    #Getting the most recent data created by the Get data button
+    data <- filtered_data()
+    
+    #Displaying a message instead of an error when no observations are returned
+    validate(
+      need(
+        nrow(data) > 0,
+        "The selected filters returned no observations."
+      )
+    )
+    
+    #Pausing the execution until the inputs are available
+    req(input$summary_cat_1, input$bar_position)
+    
+    #Saving the inputs in objects, so they are easier to use inside the plot
+    cat_1 <- input$summary_cat_1
+    cat_2 <- input$summary_cat_2
+    x_label <- get_label(cat_1, vars)
+    
+    #Creating a simple bar chart when no second variable is selected
+    if (is.null(cat_2) || cat_2 == "none") {
+      
+      p <- ggplot(data = data,
+                  aes(x = .data[[cat_1]])) +
+        geom_bar(fill = "steelblue") +
+        labs(title = paste("Number of sales by", x_label),
+             x = x_label,
+             y = "Count")
+      
+    } else {
+      
+      #The two variables have to be different to create a meaningful graph
+      validate(
+        need(
+          cat_1 != cat_2,
+          "Please select two different categorical variables."
+        )
+      )
+      
+      #The label of the y axis changes when the bars are displayed as proportions
+      fill_label <- get_label(cat_2, vars)
+      y_label <- ifelse(input$bar_position == "fill", "Proportion", "Count")
+      
+      #Creating the bar chart colored by the second variable, the position comes from the user
+      p <- ggplot(data = data,
+                  aes(x = .data[[cat_1]],
+                      fill = .data[[cat_2]])) +
+        geom_bar(position = input$bar_position) +
+        labs(title = paste("Number of sales by", x_label, "and", fill_label),
+             x = x_label,
+             y = y_label,
+             fill = fill_label)
+    }
+    
+    #Adding the theme, the labels are rotated because some variables have many levels
+    p +
+      theme_classic() +
+      theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+    
+  })
 }
 
 shinyApp(ui = ui, server = server)
