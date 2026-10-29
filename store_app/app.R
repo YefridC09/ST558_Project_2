@@ -8,6 +8,7 @@ library(janitor)
 library(zipcodeR)
 library(maps)
 library(DT)
+library(shinycssloaders)
 
 #First we are going to import the data, which is going to be run one time when the app is launched
 store_data <- read_excel("assets/superstore_data.xls") |>
@@ -45,9 +46,16 @@ get_label <- function(value, lookup) {
   names(lookup)[match(value, lookup)]
 }
 
+#Getting the polygons of the US states, they are used as the background of the map
+us_map <- map_data("state")
+
+#Getting the coordinates of each ZIP code, they are matched with the sales when the map is created
+zip_lookup <- zip_code_db |>
+  dplyr::select(zipcode, lat, lng)
+
 ui <- page_sidebar(
   
-  title = "US SuperStore Online Sales from 2014 - 2018",
+  title = h1(strong("US SuperStore Online Sales from 2014 - 2018")),
   
   sidebar = sidebar(
     
@@ -114,7 +122,132 @@ ui <- page_sidebar(
     tabsetPanel(
       tabPanel(
         "About",
-        "This app is used to explore the data from online sales of the SuperStore, ...",
+        
+        br(),
+        
+        #Describing the purpose of the app
+        h2("Purpose of the app"),
+        
+        p(
+          "This app allows you to explore the online sales of the US SuperStore. ",
+          "You can choose a part of the data (for example, one region or the sales with a discount),",
+          " look at it as a table, download it, and create numerical and graphical summaries to find ",
+          "which products, customers and regions bring the most sales and profit."
+        ),
+        
+        #Describing the data and giving the link to its source
+        h2("The data"),
+        
+        p(
+          "The data are the orders of the ",
+          a(
+            "Sample Superstore data set",
+            href = "https://www.kaggle.com/datasets/juhi1994/superstore/data",
+            target = "_blank"
+          ),
+          ", a fictional US retail company used to practice data analysis. ",
+          "Each row is one product sold in an order. The data has ",
+          strong(format(nrow(store_data), big.mark = ",")),
+          " rows with orders placed from ",
+          strong(format(min(store_data$order_date, na.rm = TRUE), "%B %Y")),
+          " to ",
+          strong(format(max(store_data$order_date, na.rm = TRUE), "%B %Y")),
+          ". The variables used in the app are:"
+        ),
+        
+        #Listing the variables of the data
+        tags$ul(
+          tags$li(
+            strong("Categorical variables: "),
+            "segment (consumer, corporate or home office), region, state, ",
+            "category, sub category and ship mode."
+          ),
+          tags$li(
+            strong("Numeric variables: "),
+            "sales (in dollars), quantity, discount (from 0 to 1) and profit (in dollars, ",
+            "it is negative when the store loses money)."
+          ),
+          tags$li(
+            strong("Other variables: "),
+            "order date, ship date and ZIP code (used to build the map)."
+          )
+        ),
+        
+        #Describing the purpose of the sidebar
+        h2("How to use the sidebar"),
+        
+        p(
+          "The sidebar is used to ",
+          strong("subset the data"),
+          " before it is displayed, summarized or plotted:"
+        ),
+        
+        tags$ul(
+          tags$li(
+            "Select a categorical variable and choose which of its levels you want to keep. ",
+            "All levels are selected at the beginning, and the ",
+            em("Select All"),
+            " and ",
+            em("Clear All"),
+            " buttons help you to change the selection quickly. Once the first variable is chosen, ",
+            "you can select a second categorical variable and filter it in the same way."
+          ),
+          tags$li(
+            "Select a numeric variable and use the slider to choose the lower and upper bound ",
+            "of the values you want to keep. Once the first variable is chosen, ",
+            "you can select a second numeric variable with its own slider."
+          ),
+          tags$li(
+            "Click the ",
+            strong("Get data"),
+            " button to apply the filters. ",
+            strong("The data does not change until this button is clicked"),
+            ", so you can change the widgets as many times as you want before applying them."
+          )
+        ),
+        
+        #Describing the purpose of each tab
+        h2("What you can find in each tab"),
+        
+        tags$ul(
+          tags$li(
+            strong("About: "),
+            "the page you are reading, with the description of the app and the data."
+          ),
+          tags$li(
+            strong("Data Download: "),
+            "a table with the data obtained with the sidebar. The ",
+            em("Download"),
+            " button saves this data as a csv file."
+          ),
+          tags$li(
+            strong("Data Exploration: "),
+            "summaries and graphs of the data obtained with the sidebar. It has three sub tabs:",
+            tags$ul(
+              tags$li(
+                strong("Categorical summaries: "),
+                "a one-way or two-way contingency table and a bar chart (stacked, side by side ",
+                "or as proportions) for the categorical variables you choose."
+              ),
+              tags$li(
+                strong("Numeric summaries: "),
+                "the count, mean, median, standard deviation, minimum and maximum of a numeric ",
+                "variable, for all the data or at the levels of a categorical variable."
+              ),
+              tags$li(
+                strong("Graphs: "),
+                "boxplots, violin plots, histograms, scatterplots and a map of the sales by ZIP code. ",
+                "You can choose the variables and color or facet the graph by a categorical variable. ",
+                "Sales are shown in a logarithmic scale in the boxplots, violin plots and histograms ",
+                "because a few very large sales would hide the rest of the values."
+              )
+            )
+          )
+        ),
+        
+        br(),
+        
+        #Adding a picture related to the data
         tags$figure(
           class = "centerFigure",
           tags$img(
@@ -130,7 +263,8 @@ ui <- page_sidebar(
       ),
       tabPanel(
         "Data Download",
-        DT::dataTableOutput("table_filtered"),
+        withSpinner(
+        DT::dataTableOutput("table_filtered")),
         downloadButton("download_data", "Download")
       ),
       #Creating the data exploration tab
@@ -205,19 +339,21 @@ ui <- page_sidebar(
             #Creating the location where the categorical table will be displayed
             h4("Contingency table"),
             
+            withSpinner(
             DT::dataTableOutput(
               outputId = "categorical_summary_table"
-            ),
+            )),
             
             br(),
             
             #Creating the location where the categorical graph will be displayed
             h4("Categorical bar chart"),
             
+            withSpinner(
             plotOutput(
               outputId = "categorical_summary_plot",
               height = "500px"
-            )
+            ))
           ),
           
           
@@ -260,9 +396,10 @@ ui <- page_sidebar(
             #Creating the location where the numeric table will be displayed
             h4("Numeric summary statistics"),
             
+            withSpinner(
             DT::dataTableOutput(
               outputId = "numeric_summary_table"
-            )
+            ))
           ),
           
        
@@ -381,10 +518,11 @@ ui <- page_sidebar(
             ),
             
             #Creating the location where the selected graph will be displayed
+            withSpinner(
             plotOutput(
               outputId = "exploration_plot",
               height = "600px"
-            )
+            ))
           )
         )
       )
@@ -818,6 +956,264 @@ ignoreNULL = FALSE
       theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
     
   })
+  
+  #Creating the numeric summaries, for all the data or at the levels of a categorical variable
+  output$numeric_summary_table <- DT::renderDataTable({
+    
+    #Getting the most recent data created by the Get data button
+    data <- filtered_data()
+    
+    #Displaying a message instead of an error when no observations are returned
+    validate(
+      need(
+        nrow(data) > 0,
+        "The selected filters returned no observations."
+      )
+    )
+    
+    #Pausing the execution until the numeric variable is available
+    req(input$summary_num)
+    
+    #Saving the inputs in objects, so they are easier to use inside the summary
+    num_var <- input$summary_num
+    group_var <- input$summary_group
+    
+    #Grouping the data only when the user selects a categorical variable
+    if (is.null(group_var) || group_var == "none") {
+      grouped_data <- data
+    } else {
+      grouped_data <- data |>
+        group_by(across(all_of(group_var)))
+    }
+    
+    #Calculating the summaries and sorting them from the highest to the lowest count
+    summary_table <- grouped_data |>
+      summarize(n = n(),
+                mean = round(mean(.data[[num_var]], na.rm = TRUE), 2),
+                median = round(median(.data[[num_var]], na.rm = TRUE), 2),
+                sd = round(sd(.data[[num_var]], na.rm = TRUE), 2),
+                min = round(min(.data[[num_var]], na.rm = TRUE), 2),
+                max = round(max(.data[[num_var]], na.rm = TRUE), 2),
+                .groups = "drop") |>
+      arrange(desc(n))
+    
+    #Returning the numeric summary table
+    summary_table
+    
+  })
+  
+  output$exploration_plot <- renderPlot({
+    
+    #Getting the most recent data created by the Get data button
+    data <- filtered_data()
+    
+    #Displaying a message instead of an error when no observations are returned
+    validate(
+      need(
+        nrow(data) > 0,
+        "The selected filters returned no observations."
+      )
+    )
+    
+    #Pausing the execution until the main inputs are available
+    req(input$explore_plot_type, input$explore_num_y, input$explore_cat_x)
+    
+    #Saving the inputs in objects, so they are easier to use inside the plot
+    plot_type <- input$explore_plot_type
+    num_y <- input$explore_num_y
+    cat_x <- input$explore_cat_x
+    color_var <- input$explore_color
+    facet_var <- input$explore_facet
+    
+    #Checking if the user selected the optional color and facet variables
+    has_color <- !is.null(color_var) && color_var != "none"
+    has_facet <- !is.null(facet_var) && facet_var != "none"
+    
+    #Getting the names that will be displayed in the labels of the graph
+    y_label <- get_label(num_y, num_vars)
+    x_label <- get_label(cat_x, vars)
+    color_label <- if (has_color) get_label(color_var, vars) else NULL
+    
+    #Sales is very skewed (a few very big sales), so a logarithmic scale is used for it as in the static file
+    use_log <- num_y == "sales"
+    
+    #--------------------------------------------------------
+    #Boxplot and violin plot
+    #--------------------------------------------------------
+    if (plot_type %in% c("boxplot", "violin")) {
+      
+      #The categorical variable goes in the x axis and the numeric variable in the y axis
+      p <- ggplot(data = data,
+                  aes(x = .data[[cat_x]],
+                      y = .data[[num_y]]))
+      
+      #Creating the geom with or without the color variable
+      if (has_color) {
+        
+        p <- p + aes(fill = .data[[color_var]])
+        
+        geom_layer <- if (plot_type == "boxplot") geom_boxplot() else geom_violin()
+        
+      } else {
+        
+        geom_layer <- if (plot_type == "boxplot") {
+          geom_boxplot(fill = "steelblue")
+        } else {
+          geom_violin(fill = "steelblue")
+        }
+      }
+      
+      plot_name <- ifelse(plot_type == "boxplot", "Boxplot", "Violin plot")
+      
+      p <- p +
+        geom_layer +
+        labs(title = paste(plot_name, "of", y_label, "by", x_label),
+             x = x_label,
+             y = ifelse(use_log, paste(y_label, "(log scale)"), y_label),
+             fill = color_label) +
+        theme_bw() +
+        theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+      
+      #Applying the logarithmic scale only to sales
+      if (use_log) {
+        p <- p + scale_y_log10()
+      }
+      
+      #--------------------------------------------------------
+      #Histogram
+      #--------------------------------------------------------
+    } else if (plot_type == "histogram") {
+      
+      req(input$histogram_bins)
+      
+      p <- ggplot(data = data,
+                  aes(x = .data[[num_y]]))
+      
+      #Creating the histogram with or without the color variable
+      if (has_color) {
+        
+        p <- p +
+          aes(fill = .data[[color_var]]) +
+          geom_histogram(bins = input$histogram_bins)
+        
+      } else {
+        
+        p <- p +
+          geom_histogram(bins = input$histogram_bins,
+                         fill = "steelblue",
+                         color = "white")
+      }
+      
+      p <- p +
+        labs(title = paste("Histogram of", y_label),
+             x = ifelse(use_log, paste(y_label, "(log scale)"), y_label),
+             y = "Count",
+             fill = color_label) +
+        theme_bw()
+      
+      #Applying the logarithmic scale only to sales
+      if (use_log) {
+        p <- p + scale_x_log10()
+      }
+      
+      #--------------------------------------------------------
+      #Scatterplot
+      #--------------------------------------------------------
+    } else if (plot_type == "scatterplot") {
+      
+      #Pausing the execution until the x variable is available
+      req(input$explore_num_x)
+      
+      num_x <- input$explore_num_x
+      x_num_label <- get_label(num_x, num_vars)
+      
+      #The two numeric variables have to be different to create a meaningful graph
+      validate(
+        need(
+          num_x != num_y,
+          "Please select two different numeric variables for the scatterplot."
+        )
+      )
+      
+      p <- ggplot(data = data,
+                  aes(x = .data[[num_x]],
+                      y = .data[[num_y]]))
+      
+      #Creating the points with or without the color variable
+      if (has_color) {
+        
+        p <- p +
+          aes(colour = .data[[color_var]]) +
+          geom_point(alpha = 0.6)
+        
+      } else {
+        
+        p <- p +
+          geom_point(alpha = 0.6,
+                     colour = "steelblue")
+      }
+      
+      p <- p +
+        labs(title = paste(y_label, "vs", x_num_label),
+             x = x_num_label,
+             y = y_label,
+             colour = color_label) +
+        theme_bw()
+      
+      #--------------------------------------------------------
+      #Map by ZIP code
+      #--------------------------------------------------------
+    } else {
+      
+      #Adding the coordinates of each ZIP code, the zeros lost by excel are added back (i.e. 5408 is 05408)
+      map_points <- data |>
+        mutate(postal_code = str_pad(as.character(postal_code),
+                                     width = 5,
+                                     side = "left",
+                                     pad = "0")) |>
+        left_join(zip_lookup,
+                  by = c("postal_code" = "zipcode")) |>
+        drop_na(lat, lng)
+      
+      #Displaying a message instead of an error when no ZIP code is found
+      validate(
+        need(
+          nrow(map_points) > 0,
+          "No ZIP code coordinates were found for the selected data."
+        )
+      )
+      
+      #The polygons are the background and the points are the sales, the size and color use the numeric variable
+      p <- ggplot() +
+        geom_polygon(data = us_map,
+                     aes(x = long, y = lat, group = group),
+                     fill = "gray",
+                     color = "white",
+                     linewidth = 0.2) +
+        geom_point(data = map_points,
+                   aes(x = lng,
+                       y = lat,
+                       size = .data[[num_y]],
+                       color = .data[[num_y]]),
+                   alpha = 0.7) +
+        scale_color_viridis_c() +
+        coord_fixed(1.3) +
+        labs(title = paste(y_label, "by ZIP code"),
+             color = y_label,
+             size = y_label) +
+        theme_void()
+    }
+    
+    #Adding the facets when the user selects a variable (the map background is repeated in every panel)
+    if (has_facet) {
+      p <- p + facet_wrap(facet_var)
+    }
+    
+    #Returning the graph
+    p
+    
+  })
+  
 }
 
 shinyApp(ui = ui, server = server)
